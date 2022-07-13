@@ -9,7 +9,7 @@ b---d
 --d--
 ----d
 """
-
+import heapq
 import math
 from collections import namedtuple
 
@@ -28,28 +28,34 @@ def getDirtLocs(grid):
     return dirt_locs
 
 
-def heuristic(s1, s2):
-    dist = math.sqrt((s1.pos.i - s2.pos.i)**2 + (s1.pos.j - s2.pos.j)**2)
-    dirt_size = abs(s1.num_dirt - s2.num_dirt)
-    return dist + dirt_size
+def heuristic(state, dirt_locs):
+    dirt_dists = []
+    for dirt_loc in dirt_locs:
+        dirt_dists.append(abs(state.pos.i - dirt_loc.i) + abs(state.pos.j - dirt_loc.j))
+    dirt_dists.sort()
+    alpha = 0.5
+    weight = 1/alpha
+    cost = 0
+    for dist in dirt_dists:
+        weight *= alpha
+        cost += dist * weight
+    return cost + state.num_dirt
 
 
 def getSuccessors(state, dirt_locs):
-    cornerActions = {Position(0, 0): ["DOWN", "RIGHT"],
-                     Position(0, BOARD_SIZE-1): ["DOWN", "LEFT"],
-                     Position(BOARD_SIZE-1, 0): ["UP", "RIGHT"],
-                     Position(BOARD_SIZE-1, BOARD_SIZE-1): ["UP", "LEFT"]}
-    normalActions = {"UP", "DOWN", "LEFT", "RIGHT"}
     actions = set()
     successors = set()
     pos = state.pos
-    if state.pos in dirt_locs:
+    if pos in dirt_locs:
         actions.add("CLEAN")
-    if state.pos in cornerActions:
-        for action in cornerActions[state.pos]:
-            actions.add(action)
-    else:
-        actions += normalActions
+    if pos.i - 1 >= 0:
+        actions.add("UP")
+    if pos.i + 1 < 5:
+        actions.add("DOWN")
+    if pos.j - 1 >= 0:
+        actions.add("LEFT")
+    if pos.j + 1 < 5:
+        actions.add("RIGHT")
     for action in actions:
         successor = None
         if action == "CLEAN":
@@ -76,14 +82,17 @@ def next_move(posr, posc, grid):
     for dirt in dirt_locs:
         avg_i += dirt.i
         avg_j += dirt.j
-    avg_i = avg_i / len(dirt_locs)
-    avg_j = avg_j / len(dirt_locs)
+    avg_i = avg_i // len(dirt_locs)
+    avg_j = avg_j // len(dirt_locs)
     cod = Position(avg_i, avg_j)
-    print(f"state: {state}")
-    print(f"goalStates: {goalStates}")
-    print(f"CoD: {cod}")
-    print(f"successors: {getSuccessors(state, dirt_locs)}")
-
+    if state in goalStates:
+        return None
+    for nextState, action, stepCost in getSuccessors(state, dirt_locs):
+        priority = heuristic(nextState, dirt_locs)
+        heapq.heappush(pq, (priority, action))
+    priority, action = heapq.heappop(pq)
+    print(action)
+    return action
 # Tail starts here
 
 
