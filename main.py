@@ -15,6 +15,8 @@ from collections import namedtuple
 
 Position = namedtuple("Position", ["i", "j"])
 State = namedtuple("State", ["pos", "num_dirt"])
+Item = namedtuple("Item", ["state", "path", "cost"])
+PQItem = namedtuple("PQItem", ["priority", "item"])
 ACTIONS = ("UP", "DOWN", "LEFT", "RIGHT", "CLEAN")
 BOARD_SIZE = 5
 
@@ -29,17 +31,24 @@ def getDirtLocs(grid):
 
 
 def heuristic(state, dirt_locs):
-    dirt_dists = []
-    for dirt_loc in dirt_locs:
-        dirt_dists.append(abs(state.pos.i - dirt_loc.i) + abs(state.pos.j - dirt_loc.j))
-    dirt_dists.sort()
-    alpha = 0.5
-    weight = 1/alpha
-    cost = 0
-    for dist in dirt_dists:
-        weight *= alpha
-        cost += dist * weight
-    return cost + state.num_dirt
+    dirt_list = list(dirt_locs)
+    estimate = 0
+    pos = state.pos
+    while len(dirt_list) > 0:
+        dirt_dists = []
+        for dirt in dirt_list:
+            dirt_dists.append(abs(pos.i - dirt.i) + abs(pos.j - dirt.j))
+        dirt_dists.sort()
+        alpha = 0.25
+        weight = 1/alpha
+        cost = 0
+        for dist in dirt_dists:
+            weight *= alpha
+            cost += dist * weight
+        estimate += cost
+        dirt_list.sort(key=lambda dirt: abs(pos.i - dirt.i) + abs(pos.j - dirt.j))
+        pos = dirt_list.pop(0)
+    return estimate
 
 
 def getSuccessors(state, dirt_locs):
@@ -59,7 +68,7 @@ def getSuccessors(state, dirt_locs):
     for action in actions:
         successor = None
         if action == "CLEAN":
-            successor = (State(state.pos, state.num_dirt - 1), action, 1)
+            successor = (State(state.pos, state.num_dirt - 1), action, 0)
         elif action == "UP":
             successor = (State(Position(pos.i - 1, pos.j), state.num_dirt), action, 1)
         elif action == "DOWN":
@@ -74,25 +83,30 @@ def getSuccessors(state, dirt_locs):
 
 def next_move(posr, posc, grid):
     pq = []
+    explored = set()
     dirt_locs = getDirtLocs(grid)
-    state = State(Position(posr, posc), len(dirt_locs))
+    startState = State(Position(posr, posc), len(dirt_locs))
     goalStates = set([State(dirt, 0) for dirt in dirt_locs])
-    avg_i = 0
-    avg_j = 0
-    for dirt in dirt_locs:
-        avg_i += dirt.i
-        avg_j += dirt.j
-    avg_i = avg_i // len(dirt_locs)
-    avg_j = avg_j // len(dirt_locs)
-    cod = Position(avg_i, avg_j)
-    if state in goalStates:
-        return None
-    for nextState, action, stepCost in getSuccessors(state, dirt_locs):
-        priority = heuristic(nextState, dirt_locs)
-        heapq.heappush(pq, (priority, action))
-    priority, action = heapq.heappop(pq)
-    print(action)
-    return action
+    priority = heuristic(startState, dirt_locs) + 0
+    heapq.heappush(pq, PQItem(priority, Item(startState, None, 0)))
+    while len(pq) != 0:
+        _, item = heapq.heappop(pq)
+        state, path, cost = item
+        if state in explored:
+            continue
+        if state in goalStates:
+            print(path[0])
+            return path[0]
+        explored.add(state)
+        for nextState, action, stepCost in getSuccessors(state, dirt_locs):
+            newCost = cost + stepCost
+            newPath = []
+            if path is not None:
+                newPath = path.copy()
+            newPath.append(action)
+            priority = heuristic(nextState, dirt_locs) + newCost
+            item = Item(nextState, newPath, newCost)
+            heapq.heappush(pq, PQItem(priority, item))
 # Tail starts here
 
 
