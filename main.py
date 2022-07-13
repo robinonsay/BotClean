@@ -35,14 +35,13 @@ def getDist(pos1, pos2):
 
 
 def heuristic(state, dirt_locs):
-    # dirt_list = list(dirt_locs)
-    # estimate = 0
-    # pos = state.pos
-    # while len(dirt_list) > 0:
-    #     dirt_list.sort(key=lambda dirt: getDist(dirt, pos))
-    #     estimate += getDist(dirt_list[0], pos)
-    #     pos = dirt_list.pop(0)
+    dirt_list = list(dirt_locs)
     estimate = 0
+    pos = state.pos
+    while len(dirt_list) > 0:
+        dirt_list.sort(key=lambda dirt: getDist(dirt, pos))
+        estimate += getDist(dirt_list[0], pos)
+        pos = dirt_list.pop(0)
     return estimate
 
 
@@ -65,13 +64,13 @@ def getSuccessors(state, dirt_locs):
         if action == "CLEAN":
             successor = (State(state.pos, state.num_dirt - 1), action, 1)
         elif action == "UP":
-            successor = (State(Position(pos.i - 1, pos.j), state.num_dirt), action, 1)
+            successor = (State(Position(pos.i - 1, pos.j), state.num_dirt), action, 2)
         elif action == "DOWN":
-            successor = (State(Position(pos.i + 1, pos.j), state.num_dirt), action, 1)
+            successor = (State(Position(pos.i + 1, pos.j), state.num_dirt), action, 2)
         elif action == "LEFT":
-            successor = (State(Position(pos.i, pos.j - 1), state.num_dirt), action, 1)
+            successor = (State(Position(pos.i, pos.j - 1), state.num_dirt), action, 2)
         elif action == "RIGHT":
-            successor = (State(Position(pos.i, pos.j + 1), state.num_dirt), action, 1)
+            successor = (State(Position(pos.i, pos.j + 1), state.num_dirt), action, 2)
         successors.add(successor)
     return successors
 
@@ -93,6 +92,7 @@ def next_move(posr, posc, grid):
             print(path[0])
             return path[0]
         explored.add(state)
+        dirt_locs -= explored
         for nextState, action, stepCost in getSuccessors(state, dirt_locs):
             newCost = cost + stepCost
             newPath = []
