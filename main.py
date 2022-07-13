@@ -30,24 +30,19 @@ def getDirtLocs(grid):
     return dirt_locs
 
 
+def getDist(pos1, pos2):
+    return math.sqrt((pos1.i - pos2.i)**2 + (pos1.j - pos2.j)**2)
+
+
 def heuristic(state, dirt_locs):
-    dirt_list = list(dirt_locs)
+    # dirt_list = list(dirt_locs)
+    # estimate = 0
+    # pos = state.pos
+    # while len(dirt_list) > 0:
+    #     dirt_list.sort(key=lambda dirt: getDist(dirt, pos))
+    #     estimate += getDist(dirt_list[0], pos)
+    #     pos = dirt_list.pop(0)
     estimate = 0
-    pos = state.pos
-    while len(dirt_list) > 0:
-        dirt_dists = []
-        for dirt in dirt_list:
-            dirt_dists.append(abs(pos.i - dirt.i) + abs(pos.j - dirt.j))
-        dirt_dists.sort()
-        alpha = 0.25
-        weight = 1/alpha
-        cost = 0
-        for dist in dirt_dists:
-            weight *= alpha
-            cost += dist * weight
-        estimate += cost
-        dirt_list.sort(key=lambda dirt: abs(pos.i - dirt.i) + abs(pos.j - dirt.j))
-        pos = dirt_list.pop(0)
     return estimate
 
 
@@ -68,7 +63,7 @@ def getSuccessors(state, dirt_locs):
     for action in actions:
         successor = None
         if action == "CLEAN":
-            successor = (State(state.pos, state.num_dirt - 1), action, 0)
+            successor = (State(state.pos, state.num_dirt - 1), action, 1)
         elif action == "UP":
             successor = (State(Position(pos.i - 1, pos.j), state.num_dirt), action, 1)
         elif action == "DOWN":
