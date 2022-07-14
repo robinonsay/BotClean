@@ -57,7 +57,7 @@ PQItem = namedtuple("PQItem", ["priority", "item"])
 BOARD_SIZE = 5
 
 
-def getDirtLocs(grid: list) -> set:
+def getDirtLocations(grid: list) -> set:
     """
     Finds all the dirt locations
     O(m*n)
@@ -82,27 +82,30 @@ def getDist(pos1: Position, pos2: Position) -> float:
     return math.sqrt((pos1.i - pos2.i)**2 + (pos1.j - pos2.j)**2)
 
 
-def heuristic(state: State, dirt_locs: set) -> int:
+def heuristic(state: State, dirt_set: set) -> int:
     """
     This is where the fun begins...
     Uses Nearest neighbor method to calculate heuristic
     :param state: The state to calculate from
-    :param dirt_locs: Locations of the dirt
+    :param dirt_set: Locations of the dirt
     :return: A heuristic value
     """
     # Copies dirt locations to a list
-    dirt_list = list(dirt_locs)
+    dirt_list = list(dirt_set)
     estimate = 0
     pos = state.pos
     # While there is dirt in the list
     while len(dirt_list) > 0:
-        # Sort dirt to get the closest dirt position
-        # TODO: Make a minheap
-        dirt_list.sort(key=lambda dirt: getDist(dirt, pos))
+        closest_dirt = min(dirt_list, key=lambda dirt: getDist(dirt, pos))
+        index = 0
+        for i in range(len(dirt_list)):
+            if dirt_list[i] == closest_dirt:
+                index = i
+                break
         # Get the euclidean distance to that dirt
-        estimate += getDist(dirt_list[0], pos)
+        estimate += getDist(closest_dirt, pos)
         # Move the position to the dirt we just "visited"
-        pos = dirt_list.pop(0)
+        pos = dirt_list.pop(index)
     return estimate
 
 
@@ -155,13 +158,13 @@ def next_move(posr: int, posc: int, grid: list) -> str:
     # Explored nodes
     explored = set()
     # Gets the location of the dirt
-    dirt_locs = getDirtLocs(grid)
+    dirt_set = getDirtLocations(grid)
     # The starting state
-    start_state = State(Position(posr, posc), len(dirt_locs))
+    start_state = State(Position(posr, posc), len(dirt_set))
     # Set of goal states
-    goal_states = set([State(dirt, 0) for dirt in dirt_locs])
+    goal_states = set([State(dirt, 0) for dirt in dirt_set])
     # First priority for the start state
-    priority = heuristic(start_state, dirt_locs) + 0
+    priority = heuristic(start_state, dirt_set) + 0
     heapq.heappush(pq, PQItem(priority, Item(start_state, None, 0)))
     # While pq is not empty...
     while len(pq) != 0:
@@ -178,11 +181,10 @@ def next_move(posr: int, posc: int, grid: list) -> str:
             return path[0]
         # Add the state to the set of explored states
         explored.add(state)
-        # Remove dirt from the set (assumes we clean dirt when we explore a state)
-        # TODO: Find placement for this line
-        dirt_locs -= explored
+        # Remove dirt from the set
+        dirt_set -= explored
         # Get successor states
-        for nextState, action, stepCost in getSuccessors(state, dirt_locs):
+        for nextState, action, stepCost in getSuccessors(state, dirt_set):
             # Calculate new cost
             newCost = cost + stepCost
             # Initialize the path
@@ -192,7 +194,7 @@ def next_move(posr: int, posc: int, grid: list) -> str:
             # Add action to the path we took
             newPath.append(action)
             # Calculate the priority for pq and push onto pq
-            priority = heuristic(nextState, dirt_locs) + newCost
+            priority = heuristic(nextState, dirt_set) + newCost
             item = Item(nextState, newPath, newCost)
             heapq.heappush(pq, PQItem(priority, item))
 
